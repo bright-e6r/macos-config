@@ -21,25 +21,6 @@ fi
 
 echo ""
 
-if [ -f "$SCRIPT_DIR/setup-zshrc.sh" ]; then
-    echo "Running zshrc setup..."
-    "$SCRIPT_DIR/setup-zshrc.sh"
-else
-    echo "setup-zshrc.sh not found"
-fi
-
-echo ""
-
-if [ -f "$SCRIPT_DIR/setup-git-config.sh" ]; then
-    echo "Running git config setup..."
-    export XDG_CONFIG_HOME="$HOME/.config"
-    "$SCRIPT_DIR/setup-git-config.sh"
-else
-    echo "setup-git-config.sh not found"
-fi
-
-echo ""
-
 if ! command -v brew &> /dev/null; then
     echo "Homebrew not found. Installing..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -59,33 +40,49 @@ else
     echo "Homebrew found"
 fi
 
-if [ -f "$SCRIPT_DIR/Brewfile" ]; then
-    echo "Installing packages via brew bundle..."
-    cd "$SCRIPT_DIR"
-    brew bundle
-
-    if ! command -v mas &> /dev/null; then
-        echo "mas not found. Installing..."
-        brew install mas
-    else
-        echo "mas found"
-    fi
-
-    if [ -f "$SCRIPT_DIR/Masfile" ]; then
-        echo "Installing Mac App Store apps..."
-        cd "$SCRIPT_DIR"
-        while IFS= read -r line || [ -n "$line" ]; do
-            if [[ $line =~ ^mas\ install\ [0-9]+ ]]; then
-                echo "Executing: $line"
-                eval "$line"
-            fi
-        done < Masfile
-    else
-        echo "Masfile not found"
-    fi
+if [ -f "$SCRIPT_DIR/setup-brewfile.sh" ]; then
+    echo "Running brew bundle setup..."
+    "$SCRIPT_DIR/setup-brewfile.sh"
 else
-    echo "Brewfile not found"
+    echo "setup-brewfile.sh not found"
 fi
 
+echo ""
+
+if [ -f "$SCRIPT_DIR/setup-masfile.sh" ]; then
+    echo "Running mas apps setup..."
+    "$SCRIPT_DIR/setup-masfile.sh"
+else
+    echo "setup-masfile.sh not found"
+fi
+
+echo ""
+
+if [ -f "$SCRIPT_DIR/setup-ohmyzsh-powerlevel10k.sh" ]; then
+    echo "Running Oh My Zsh & PowerLevel10k setup..."
+    "$SCRIPT_DIR/setup-ohmyzsh-powerlevel10k.sh"
+else
+    echo "setup-ohmyzsh-powerlevel10k.sh not found"
+fi
+
+echo ""
+
+if [ -f "$SCRIPT_DIR/setup-git-config.sh" ]; then
+    echo "Running git config setup..."
+    export XDG_CONFIG_HOME="$HOME/.config"
+    "$SCRIPT_DIR/setup-git-config.sh"
+else
+    echo "setup-git-config.sh not found"
+fi
+
+echo ""
+echo "=================================================="
+echo "모든 설치가 완료되었습니다!"
+echo "=================================================="
+echo ""
+echo "PowerLevel10k 테마를 설정하려면 터미널에서 다음 명령을 실행하세요:"
+echo "  p10k configure"
+echo ""
+echo "설정을 마친 후에는 터미널을 다시 시작하세요."
 echo ""
 echo "=== Setup Complete ==="

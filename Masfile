@@ -1,2 +1,4 @@
 # Mac App Store
-mas install 869223134  # KakaoTalk
+mas "KakaoTalk", id: 869223134
+mas "RunCat", id: 1429033973
+mas "HwpMac2014VIEWER", id: 416746898
