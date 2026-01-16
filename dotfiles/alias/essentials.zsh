@@ -42,7 +42,7 @@ alias l="ls -lF"
 alias la="ls -laF"
 
 # List only directories
-alias lsd="ls -lF ${colorflag} | grep --color=never '^d'"
+# alias lsd="ls -lF ${colorflag} | grep --color=never '^d'"
 
 # List tree
 alias lt="ls --tree"
@@ -53,11 +53,11 @@ alias tree2="tree -d -L 2"
 
 # alias ls="command ls ${colorflag}"
 # -- blocks permission,user,size,date,name
-alias ls="lsd -l --blocks permission,size,date,name --date '+%Y/%m/%d %H:%M:%S'"
+# alias ls="lsd -l --blocks permission,size,date,name --date '+%Y/%m/%d %H:%M:%S'"
 
 # Always enable colored `grep` output
 # Note: `GREP_OPTIONS="--color=auto"` is deprecated, hence the alias usage.
-alias grep='grep --color=auto'
+# alias grep='grep --color=auto'
 # alias fgrep='fgrep --color=auto'
 # alias egrep='egrep --color=auto'
 

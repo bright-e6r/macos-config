@@ -14,9 +14,9 @@ else
     echo "mas found"
 fi
 
-if [ -f "$SCRIPT_DIR/Masfile" ]; then
+if [ -f "$(dirname "$0")/dotfiles/packages/Masfile" ]; then
     echo "Installing Mac App Store apps..."
-    cd "$SCRIPT_DIR"
+    cd "$(dirname "$0")/dotfiles/packages"
     while IFS= read -r line || [ -n "$line" ]; do
         if [[ $line =~ id:\ ([0-9]+) ]]; then
             app_id="${BASH_REMATCH[1]}"

@@ -6,7 +6,7 @@ ALIAS_DIR="$XDG_CONFIG_HOME/alias"
 
 mkdir -p "$ALIAS_DIR"
 
-cp -r "$(dirname "$0")/alias/"* "$ALIAS_DIR/"
+cp -r "$(dirname "$0")/dotfiles/alias/"* "$ALIAS_DIR/"
 
 echo "Aliases copied to $ALIAS_DIR"
 

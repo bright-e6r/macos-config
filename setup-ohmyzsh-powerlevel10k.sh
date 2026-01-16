@@ -6,7 +6,7 @@ echo "=== Oh My Zsh & PowerLevel10k Setup Script ==="
 echo ""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TEMPLATE_ZSHRC="$SCRIPT_DIR/.zshrc"
+TEMPLATE_ZSHRC="$SCRIPT_DIR/dotfiles/.zshrc"
 
 # Install Oh My Zsh
 echo "Installing Oh My Zsh..."
