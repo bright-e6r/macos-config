@@ -11,7 +11,7 @@ This repository contains scripts, dotfiles, and configuration for setting up and
 - Package management via Homebrew (CLI tools, GUI apps)
 - Mac App Store apps via Mas
 - Git configuration with XDG Base Directory compliance
-- Shell configuration (zsh)
+- Shell configuration (zsh, tmux)
 
 The repository is meant to be cloned and executed via `./install.sh` on a fresh macOS installation.
 
@@ -81,3 +81,7 @@ ci: add commit message linting workflow
 - Use scopes when relevant (e.g., `feat(brew):`, `fix(git):`)
 - Include body or footer when context requires explanation or relates to issues
 - Breaking changes should be indicated with `BREAKING CHANGE:` in the footer
+
+## Documentation
+
+For detailed information about repository structure, setup scripts, and post-installation steps, refer to **README.md**.
