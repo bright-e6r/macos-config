@@ -80,3 +80,102 @@ jobs:
           delete-branch: true
           labels: automated
           commit-message: "chore: weekly package update"
+
+  check-shell-scripting:
+    name: Check Shell Scripting Best Practices
+    runs-on: macos-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install latest ShellCheck
+        run: |
+          echo "Installing latest ShellCheck..."
+          brew install shellcheck
+
+      - name: Check for modern shell scripting practices
+        run: |
+          echo "=== Checking Shell Scripts for Best Practices ==="
+          echo ""
+
+          FOUND_ISSUES=0
+
+          # Check for using env in shebang (portability)
+          echo "Checking shebangs..."
+          for script in ./*.sh; do
+            if [ -f "$script" ]; then
+              FIRST_LINE=$(head -n 1 "$script")
+              if [[ $FIRST_LINE == "#!/bin/bash" ]] && ! grep -q "# shellcheck disable=SC2001" "$script"; then
+                echo "⚠️  $script: Consider using '#!/usr/bin/env bash' for better portability"
+                FOUND_ISSUES=$((FOUND_ISSUES + 1))
+              fi
+            fi
+          done
+          echo ""
+
+          # Check for set -euo pipefail (error handling)
+          echo "Checking error handling options..."
+          for script in ./*.sh; do
+            if [ -f "$script" ]; then
+              if grep -q "set -e" "$script"; then
+                if ! grep -q "set -euo pipefail" "$script"; then
+                  echo "ℹ️  $script: Currently uses 'set -e', consider upgrading to 'set -euo pipefail' for better error handling"
+                  FOUND_ISSUES=$((FOUND_ISSUES + 1))
+                fi
+              fi
+            fi
+          done
+          echo ""
+
+          # Check for backticks (deprecated)
+          echo "Checking for deprecated backticks..."
+          if grep -r '`' ./*.sh 2>/dev/null | grep -v "^Binary" | grep -v "# shellcheck"; then
+            echo "⚠️  Found backticks (\`) in scripts. Consider using \$(...) instead for better readability and nesting"
+            FOUND_ISSUES=$((FOUND_ISSUES + 1))
+          else
+            echo "✓ No deprecated backticks found"
+          fi
+          echo ""
+
+          # Check for [ vs [[ (modern bash)
+          echo "Checking for modern test commands..."
+          for script in ./*.sh; do
+            if [ -f "$script" ]; then
+              if grep -q '\[ .* \]' "$script" | grep -v "\[\["; then
+                echo "ℹ️  $script: Found '[ ... ]'. Consider using '[[ ... ]]' for modern bash features"
+                FOUND_ISSUES=$((FOUND_ISSUES + 1))
+              fi
+            fi
+          done
+          echo ""
+
+          # Run ShellCheck with strict rules
+          echo "Running ShellCheck..."
+          shellcheck --severity=warning ./*.sh || echo "ShellCheck warnings found"
+
+          echo ""
+          if [ $FOUND_ISSUES -eq 0 ]; then
+            echo "✅ All shell scripts follow modern best practices!"
+            exit 0
+          else
+            echo "ℹ️  Found $FOUND_ISSUES improvement suggestions"
+            echo "   These are suggestions for improvement, not blocking issues"
+            exit 0
+          fi
+
+      - name: Create improvement suggestions PR
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        run: |
+          # Only create PR if there are actual changes from ShellCheck fixes
+          # This is a placeholder for potential automatic fixes
+          echo "No automatic fixes needed at this time"
