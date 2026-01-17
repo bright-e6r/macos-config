@@ -42,6 +42,7 @@ brew "diff-so-fancy" # git diff 출력을 가독성 좋게 포매팅
 
 # Dev utils
 brew "opencode"
+cask "claude-code"
 
 # Taps
 tap "anomalyco/tap"
