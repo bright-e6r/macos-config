@@ -46,10 +46,12 @@ if ! grep -q "Pyenv: Python version management" "$ZSHRC"; then
         fi
     else
         # XDG alias 로딩이 없으면 맨 아래 추가
-        echo "# Pyenv: Python version management" >> "$ZSHRC"
-        echo "export PYENV_ROOT=\"$HOME/.pyenv\"" >> "$ZSHRC"
-        echo "export PATH=\"$PYENV_ROOT/bin:$PATH\"" >> "$ZSHRC"
-        echo "eval \"\$(pyenv init -)\"" >> "$ZSHRC"
+        {
+            echo "# Pyenv: Python version management"
+            echo "export PYENV_ROOT=\"$HOME/.pyenv\""
+            echo "export PATH=\"$PYENV_ROOT/bin:$PATH\""
+            echo "eval \"\$(pyenv init -)\""
+        } >> "$ZSHRC"
     fi
 
     echo "  ✓ Pyenv configuration added to .zshrc"
