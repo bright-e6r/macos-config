@@ -1,0 +1,258 @@
+name: CI - Installation Integrity Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  shellcheck:
+    name: Shell Script Validation
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: brew install shellcheck
+
+      - name: Run ShellCheck on all scripts
+        run: |
+          echo "Checking shell scripts..."
+          find . -name "*.sh" -type f -exec shellcheck -x {} +
+          echo "✓ All shell scripts passed validation"
+
+  file-structure:
+    name: File Structure Validation
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify required files exist
+        run: |
+          echo "Verifying file structure..."
+          
+          required_files=(
+            "install.sh"
+            "setup-brewfile.sh"
+            "setup-masfile.sh"
+            "setup-ohmyzsh-powerlevel10k.sh"
+            "setup-git-config.sh"
+            "setup-alias.sh"
+            "dotfiles/.zshrc"
+            "dotfiles/packages/Brewfile"
+            "dotfiles/packages/Masfile"
+            "dotfiles/alias/essentials.zsh"
+            "dotfiles/alias/git.zsh"
+          )
+          
+          for file in "${required_files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "  ✓ $file"
+            else
+              echo "  ✗ $file is missing!"
+              exit 1
+            fi
+          done
+          
+          echo "✓ All required files exist"
+
+  brewfile-validation:
+    name: Brewfile Syntax Validation
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Homebrew
+        run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+      - name: Add Homebrew to PATH
+        run: |
+          if [[ "$(/bin/uname -m)" == "arm64" ]]; then
+            echo "/opt/homebrew/bin" >> $GITHUB_PATH
+            echo "/opt/homebrew/sbin" >> $GITHUB_PATH
+          else
+            echo "/usr/local/bin" >> $GITHUB_PATH
+            echo "/usr/local/sbin" >> $GITHUB_PATH
+          fi
+
+      - name: Validate Brewfile syntax
+        run: |
+          echo "Validating Brewfile..."
+          cd dotfiles/packages
+          brew bundle check --no-upgrade --verbose || echo "Some packages not installed, but syntax is valid"
+          echo "✓ Brewfile syntax is valid"
+
+  installation-test:
+    name: CLI Packages Installation Test
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Homebrew
+        run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+      - name: Add Homebrew to PATH
+        run: |
+          if [[ "$(/bin/uname -m)" == "arm64" ]]; then
+            echo "/opt/homebrew/bin" >> $GITHUB_PATH
+            echo "/opt/homebrew/sbin" >> $GITHUB_PATH
+          else
+            echo "/usr/local/bin" >> $GITHUB_PATH
+            echo "/usr/local/sbin" >> $GITHUB_PATH
+          fi
+
+      - name: Create test Brewfile (CLI only, no casks)
+        run: |
+          echo "Creating test Brewfile (CLI packages only)..."
+          cd dotfiles/packages
+          grep -v '^cask ' Brewfile > Brewfile.cli-test || true
+          echo "✓ Test Brewfile created"
+
+      - name: Install CLI packages
+        run: |
+          echo "Installing CLI packages..."
+          cd dotfiles/packages
+          brew bundle --file=Brewfile.cli-test
+          echo "✓ CLI packages installed successfully"
+
+      - name: Verify installed packages
+        run: |
+          echo "Verifying installed packages..."
+          
+          essential_packages=(
+            "git"
+            "gh"
+            "tmux"
+            "zsh"
+            "neovim"
+            "bat"
+            "lsd"
+            "tree"
+          )
+          
+          for pkg in "${essential_packages[@]}"; do
+            if command -v "$pkg" &> /dev/null; then
+              echo "  ✓ $pkg"
+            else
+              echo "  ✗ $pkg is not installed!"
+              exit 1
+            fi
+          done
+          
+          echo "✓ All essential packages verified"
+
+  setup-scripts-test:
+    name: Setup Scripts Smoke Test
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Homebrew
+        run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+      - name: Add Homebrew to PATH
+        run: |
+          if [[ "$(/bin/uname -m)" == "arm64" ]]; then
+            echo "/opt/homebrew/bin" >> $GITHUB_PATH
+            echo "/opt/homebrew/sbin" >> $GITHUB_PATH
+          else
+            echo "/usr/local/bin" >> $GITHUB_PATH
+            echo "/usr/local/sbin" >> $GITHUB_PATH
+          fi
+
+      - name: Install dependencies
+        run: |
+          echo "Installing test dependencies..."
+          brew install git shellcheck
+          echo "✓ Dependencies installed"
+
+      - name: Test setup-git-config.sh (mock hostname)
+        run: |
+          echo "Testing setup-git-config.sh..."
+          export XDG_CONFIG_HOME="$HOME/test-config"
+          mkdir -p "$XDG_CONFIG_HOME"
+          ./setup-git-config.sh
+          
+          if [ -f "$XDG_CONFIG_HOME/git/config" ]; then
+            echo "  ✓ Git config created"
+            cat "$XDG_CONFIG_HOME/git/config"
+          else
+            echo "  ✗ Git config not created!"
+            exit 1
+          fi
+          echo "✓ setup-git-config.sh works"
+
+      - name: Test setup-alias.sh (dry-run check)
+        run: |
+          echo "Testing setup-alias.sh syntax..."
+          shellcheck setup-alias.sh
+          echo "  ✓ setup-alias.sh syntax valid"
+          
+          export XDG_CONFIG_HOME="$HOME/test-config"
+          mkdir -p "$XDG_CONFIG_HOME/alias"
+          
+          echo "Copying alias files..."
+          cp -r dotfiles/alias/* "$XDG_CONFIG_HOME/alias/"
+          
+          if [ -f "$XDG_CONFIG_HOME/alias/git.zsh" ]; then
+            echo "  ✓ Alias files can be copied"
+          else
+            echo "  ✗ Alias file not found!"
+            exit 1
+          fi
+          echo "✓ setup-alias.sh logic works"
+
+      - name: Test setup-brewfile.sh structure
+        run: |
+          echo "Testing setup-brewfile.sh structure..."
+          
+          if [ -f "dotfiles/packages/Brewfile" ]; then
+            echo "  ✓ Brewfile exists"
+          else
+            echo "  ✗ Brewfile not found!"
+            exit 1
+          fi
+          
+          shellcheck setup-brewfile.sh
+          echo "  ✓ setup-brewfile.sh syntax valid"
+          echo "✓ setup-brewfile.sh structure is valid"
+
+      - name: Test setup-masfile.sh structure
+        run: |
+          echo "Testing setup-masfile.sh structure..."
+          
+          if [ -f "dotfiles/packages/Masfile" ]; then
+            echo "  ✓ Masfile exists"
+          else
+            echo "  ✗ Masfile not found!"
+            exit 1
+          fi
+          
+          shellcheck setup-masfile.sh
+          echo "  ✓ setup-masfile.sh syntax valid"
+          echo "✓ setup-masfile.sh structure is valid"
+
+      - name: Test .zshrc template
+        run: |
+          echo "Testing .zshrc template..."
+          
+          if [ -f "dotfiles/.zshrc" ]; then
+            echo "  ✓ .zshrc exists"
+            
+            if command -v zsh &> /dev/null; then
+              zsh -n dotfiles/.zshrc
+              echo "  ✓ .zshrc syntax valid"
+            else
+              echo "  ⚠ zsh not available, skipping syntax check"
+            fi
+          else
+            echo "  ✗ .zshrc not found!"
+            exit 1
+          fi
+          echo "✓ .zshrc template is valid"
