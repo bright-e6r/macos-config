@@ -1,0 +1,24 @@
+version: 2
+updates:
+  # Enable version updates for Brewfile (Homebrew)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      # 매주 월요일 오전 9시 (한국시간) = 일요일 UTC 0시
+      interval: "weekly"
+      day: "sunday"
+      time: "00:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    assignees:
+      - "bright-e6r"
+    reviewers:
+      - "bright-e6r"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    pull-request-branch-name:
+      separator: "-"
+    versioning-strategy: increase

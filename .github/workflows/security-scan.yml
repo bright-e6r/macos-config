@@ -1,0 +1,208 @@
+name: Security Scan
+
+on:
+  schedule:
+    # 매주 월요일 새벽 2시 (한국시간) = 일요일 UTC 17시
+    - cron: '0 17 * * 0'
+  workflow_dispatch: # 수동 실행 가능
+  pull_request:
+    branches: [main]
+
+jobs:
+  scan-vulnerabilities:
+    name: Scan for security vulnerabilities
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Homebrew
+        run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+      - name: Add Homebrew to PATH
+        run: |
+          if [[ "$(/bin/uname -m)" == "arm64" ]]; then
+            echo "/opt/homebrew/bin" >> $GITHUB_PATH
+            echo "/opt/homebrew/sbin" >> $GITHUB_PATH
+          else
+            echo "/usr/local/bin" >> $GITHUB_PATH
+            echo "/usr/local/sbin" >> $GITHUB_PATH
+          fi
+
+      - name: Update Homebrew database
+        run: |
+          echo "Updating Homebrew database..."
+          brew update
+
+      - name: Check for outdated packages
+        run: |
+          echo "Checking for outdated packages..."
+          brew outdated > /tmp/outdated.txt
+
+          if [ -s /tmp/outdated.txt ]; then
+            echo "Found outdated packages:"
+            cat /tmp/outdated.txt
+          else
+            echo "All packages are up to date"
+          fi
+
+      - name: Check for security advisories
+        run: |
+          echo "Checking for security advisories..."
+
+          # Homebrew security audit
+          brew audit --strict dotfiles/packages/Brewfile > /tmp/audit.txt || true
+
+          if [ -s /tmp/audit.txt ]; then
+            echo "Security audit warnings:"
+            cat /tmp/audit.txt
+          else
+            echo "No security audit warnings found"
+          fi
+
+      - name: Check for deprecated formulas
+        run: |
+          echo "Checking for deprecated formulas..."
+
+          # Extract package names from Brewfile
+          PACKAGES=$(grep -E '^brew "' dotfiles/packages/Brewfile | sed "s/brew \"//" | sed "s/\"//" | tr '\n' ' ')
+
+          echo "Checking packages: $PACKAGES"
+
+          # Check each package
+          for pkg in $PACKAGES; do
+            if brew info "$pkg" 2>&1 | grep -q "deprecated"; then
+              echo "⚠️  Deprecated package found: $pkg"
+              echo "$pkg" >> /tmp/deprecated.txt
+            fi
+          done
+
+          if [ -f /tmp/deprecated.txt ]; then
+            echo "Deprecated packages:"
+            cat /tmp/deprecated.txt
+          else
+            echo "No deprecated packages found"
+          fi
+
+      - name: Generate security report
+        if: always()
+        run: |
+          echo "=== Security Scan Summary ==="
+          echo ""
+
+          if [ -s /tmp/outdated.txt ]; then
+            echo "❌ Outdated packages detected"
+            echo "Please update outdated packages for security reasons"
+          fi
+
+          if [ -s /tmp/audit.txt ]; then
+            echo "⚠️  Security audit warnings found"
+            echo "Please review audit warnings"
+          fi
+
+          if [ -f /tmp/deprecated.txt ]; then
+            echo "⚠️  Deprecated packages detected"
+            echo "Consider replacing deprecated packages"
+          fi
+
+          if [ ! -s /tmp/outdated.txt ] && [ ! -s /tmp/audit.txt ] && [ ! -f /tmp/deprecated.txt ]; then
+            echo "✅ No security issues found"
+          fi
+
+  create-security-pr:
+    name: Create security update PR
+    runs-on: macos-latest
+    needs: scan-vulnerabilities
+    if: github.event_name == 'schedule'
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install Homebrew
+        run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+      - name: Add Homebrew to PATH
+        run: |
+          if [[ "$(/bin/uname -m)" == "arm64" ]]; then
+            echo "/opt/homebrew/bin" >> $GITHUB_PATH
+            echo "/opt/homebrew/sbin" >> $GITHUB_PATH
+          else
+            echo "/usr/local/bin" >> $GITHUB_PATH
+            echo "/usr/local/sbin" >> $GITHUB_PATH
+          fi
+
+      - name: Update and upgrade packages
+        run: |
+          echo "Updating Homebrew..."
+          brew update
+
+          echo ""
+          echo "Upgrading packages..."
+          brew upgrade
+
+          echo ""
+          echo "Cleaning up..."
+          brew cleanup
+
+      - name: Generate updated Brewfile
+        run: |
+          echo "Generating updated Brewfile..."
+          cd dotfiles/packages
+          brew bundle dump --force
+
+      - name: Show changes
+        run: |
+          echo "=== Changed files ==="
+          git status --short
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo ""
+            echo "=== Git diff ==="
+            git diff
+          else
+            echo "No changes detected"
+          fi
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: "security: weekly security dependency updates"
+          body: |
+            ## 보안 패키지 업데이트
+
+            매주 월요일 새벽에 자동으로 보안 취약점을 스캔하고 업데이트합니다.
+
+            ### 변경된 내용
+
+            - Homebrew 패키지 보안 업데이트
+            - 보안 취약점이 있는 패키지 업그레이드
+            - Deprecated 패키지 교체
+
+            ### 검토 포인트
+
+            - 의도치 않은 패키지 추가/제거가 있는지 확인
+            - Deprecated 패키지가 최신 패키지로 교체되었는지 확인
+            - **보안 업데이트는 우선적으로 병합해 주세요**
+
+            ### 참고
+
+            - 이 PR은 보안 취약점 해결을 위한 것입니다
+            - 테스트 후 문제가 없으면 가능한 빨리 병합해 주세요
+            - 주요 보안 업데이트인 경우 즉시 병합을 권장합니다
+
+          branch: security-updates
+          delete-branch: true
+          labels: security,dependencies
+          reviewers: bright-e6r
+          assignees: bright-e6r
+          commit-message: "security: weekly security dependency updates"

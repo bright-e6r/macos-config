@@ -1,0 +1,321 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*' # v1.2.3 형식의 태그 푸시 시 실행
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 전체 이력을 가져옴
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Creating release for version: $VERSION"
+
+      - name: Extract commits since last tag
+        id: get_commits
+        run: |
+          # 마지막 태그 찾기
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous tag found, getting all commits"
+            COMMIT_RANGE="HEAD"
+          else
+            echo "Last tag: $LAST_TAG"
+            COMMIT_RANGE="$LAST_TAG..HEAD"
+          fi
+          
+          echo "commit_range=$COMMIT_RANGE" >> $GITHUB_OUTPUT
+          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog from commits
+        id: generate_changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          COMMIT_RANGE="${{ steps.get_commits.outputs.commit_range }}"
+          LAST_TAG="${{ steps.get_commits.outputs.last_tag }}"
+          
+          echo "Extracting commits from: $COMMIT_RANGE"
+          
+          # 커밋 로그 가져오기
+          git log $COMMIT_RANGE --pretty=format:"%s" > /tmp/commits.txt
+          
+          # Conventional Commits 파싱
+          echo "=== Breaking Changes ===" > /tmp/breaking.txt
+          echo "### Breaking Changes" > /tmp/release_body.md
+          echo "" >> /tmp/release_body.md
+          
+          echo "=== New Features ===" > /tmp/feat.txt
+          echo "### New Features" >> /tmp/release_body.md
+          echo "" >> /tmp/release_body.md
+          
+          echo "=== Bug Fixes ===" > /tmp/fix.txt
+          echo "### Bug Fixes" >> /tmp/release_body.md
+          echo "" >> /tmp/release_body.md
+          
+          echo "=== Improvements ===" > /tmp/refactor.txt
+          echo "### Improvements" >> /tmp/release_body.md
+          echo "" >> /tmp/release_body.md
+          
+          echo "=== Documentation ===" > /tmp/docs.txt
+          echo "### Documentation" >> /tmp/release_body.md
+          echo "" >> /tmp/release_body.md
+          
+          echo "=== Other Changes ===" > /tmp/chore.txt
+          echo "### Other Changes" >> /tmp/release_body.md
+          echo "" >> /tmp/release_body.md
+          
+          HAS_CHANGES=false
+          
+          # 각 커밋을 분류
+          while IFS= read -r commit; do
+            # Breaking changes 감지 (feat!: 또는 fix!)
+            if [[ $commit =~ ^(feat|fix|refactor|build|ci|chore|docs|test)!:.+ ]]; then
+              echo "- ${commit#*:!}" >> /tmp/breaking.txt
+              HAS_CHANGES=true
+            elif [[ $commit =~ BREAKING\ CHANGE: ]]; then
+              echo "- ${commit#*BREAKING CHANGE: }" >> /tmp/breaking.txt
+              HAS_CHANGES=true
+            # 일반 커밋 분류
+            elif [[ $commit =~ ^feat:.+ ]]; then
+              echo "- ${commit#feat: }" >> /tmp/feat.txt
+              HAS_CHANGES=true
+            elif [[ $commit =~ ^fix:.+ ]]; then
+              echo "- ${commit#fix: }" >> /tmp/fix.txt
+              HAS_CHANGES=true
+            elif [[ $commit =~ ^refactor:.+ ]]; then
+              echo "- ${commit#refactor: }" >> /tmp/refactor.txt
+              HAS_CHANGES=true
+            elif [[ $commit =~ ^docs:.+ ]]; then
+              echo "- ${commit#docs: }" >> /tmp/docs.txt
+              HAS_CHANGES=true
+            elif [[ $commit =~ ^chore:.+ || $commit =~ ^build:.+ ]]; then
+              echo "- ${commit#${commit%%:*}: }" >> /tmp/chore.txt
+              HAS_CHANGES=true
+            fi
+          done < /tmp/commits.txt
+          
+          # 빈 섹션 제거
+          for file in /tmp/breaking.txt /tmp/feat.txt /tmp/fix.txt /tmp/refactor.txt /tmp/docs.txt /tmp/chore.txt; do
+            if [ $(wc -l < "$file") -eq 2 ]; then
+              # 헤더와 빈 줄만 있는 경우
+              sed -i '' '2d' "$file"
+            fi
+          done
+          
+          # release body 조합
+          echo "## What's Changed" >> /tmp/release_body.md
+          echo "" >> /tmp/release_body.md
+          
+          if [ $(wc -l < /tmp/breaking.txt) -gt 1 ]; then
+            cat /tmp/breaking.txt >> /tmp/release_body.md
+            echo "" >> /tmp/release_body.md
+          fi
+          
+          if [ $(wc -l < /tmp/feat.txt) -gt 1 ]; then
+            cat /tmp/feat.txt >> /tmp/release_body.md
+            echo "" >> /tmp/release_body.md
+          fi
+          
+          if [ $(wc -l < /tmp/fix.txt) -gt 1 ]; then
+            cat /tmp/fix.txt >> /tmp/release_body.md
+            echo "" >> /tmp/release_body.md
+          fi
+          
+          if [ $(wc -l < /tmp/refactor.txt) -gt 1 ]; then
+            cat /tmp/refactor.txt >> /tmp/release_body.md
+            echo "" >> /tmp/release_body.md
+          fi
+          
+          if [ $(wc -l < /tmp/docs.txt) -gt 1 ]; then
+            cat /tmp/docs.txt >> /tmp/release_body.md
+            echo "" >> /tmp/release_body.md
+          fi
+          
+          if [ $(wc -l < /tmp/chore.txt) -gt 1 ]; then
+            cat /tmp/chore.txt >> /tmp/release_body.md
+            echo "" >> /tmp/release_body.md
+          fi
+          
+          # 현재 날짜 추가
+          DATE=$(date +%Y-%m-%d)
+          echo "" >> /tmp/release_body.md
+          echo "---" >> /tmp/release_body.md
+          echo "" >> /tmp/release_body.md
+          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$LAST_TAG...v$VERSION" >> /tmp/release_body.md
+          
+          # release body 출력
+          echo "=== Generated Release Body ==="
+          cat /tmp/release_body.md
+          
+          # breaking changes가 있는지 체크
+          if [ $(wc -l < /tmp/breaking.txt) -gt 1 ]; then
+            echo "has_breaking=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_breaking=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: /tmp/release_body.md
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release body
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-body
+          path: /tmp/release_body.md
+
+  update-changelog:
+    name: Update CHANGELOG.md
+    runs-on: macos-latest
+    needs: create-release
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          DATE=$(date +%Y-%m-%d)
+          echo "date=$DATE" >> $GITHUB_OUTPUT
+
+      - name: Extract commits since last tag
+        id: get_commits
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+          
+          if [ -z "$LAST_TAG" ]; then
+            echo "commit_range=HEAD" >> $GITHUB_OUTPUT
+          else
+            echo "commit_range=$LAST_TAG..HEAD" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate CHANGELOG entry
+        id: generate_changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          DATE="${{ steps.get_version.outputs.date }}"
+          COMMIT_RANGE="${{ steps.get_commits.outputs.commit_range }}"
+          LAST_TAG="${{ steps.get_commits.outputs.last_tag }}"
+          
+          echo "## [$VERSION] - $DATE" > /tmp/changelog_entry.md
+          echo "" >> /tmp/changelog_entry.md
+          
+          # Breaking Changes
+          echo "### Breaking Changes" >> /tmp/changelog_entry.md
+          git log $COMMIT_RANGE --pretty=format:"%s" | grep -E '^feat!:|^fix!:|^refactor!:|^build!:|^ci!:|^chore!:|^docs!:|^test!:' | sed 's/^[^:]*: /- /' | sed 's/^!:/- /' | sort -u >> /tmp/changelog_entry.md || echo "None" >> /tmp/changelog_entry.md
+          echo "" >> /tmp/changelog_entry.md
+          
+          # Added
+          echo "### Added" >> /tmp/changelog_entry.md
+          git log $COMMIT_RANGE --pretty=format:"%s" | grep -E '^feat:' | sed 's/^feat: /- /' | sort -u >> /tmp/changelog_entry.md || echo "None" >> /tmp/changelog_entry.md
+          echo "" >> /tmp/changelog_entry.md
+          
+          # Changed
+          echo "### Changed" >> /tmp/changelog_entry.md
+          git log $COMMIT_RANGE --pretty=format:"%s" | grep -E '^refactor:' | sed 's/^refactor: /- /' | sort -u >> /tmp/changelog_entry.md || echo "None" >> /tmp/changelog_entry.md
+          echo "" >> /tmp/changelog_entry.md
+          
+          # Deprecated
+          echo "### Deprecated" >> /tmp/changelog_entry.md
+          git log $COMMIT_RANGE --pretty=format:"%s" | grep -E '^feat(deprecated):|^fix(deprecated):' | sed 's/^[^:]*: /- /' | sort -u >> /tmp/changelog_entry.md || echo "None" >> /tmp/changelog_entry.md
+          echo "" >> /tmp/changelog_entry.md
+          
+          # Removed
+          echo "### Removed" >> /tmp/changelog_entry.md
+          git log $COMMIT_RANGE --pretty=format:"%s" | grep -E '^feat\(removed\):|^fix\(removed\):' | sed 's/^[^:]*: /- /' | sort -u >> /tmp/changelog_entry.md || echo "None" >> /tmp/changelog_entry.md
+          echo "" >> /tmp/changelog_entry.md
+          
+          # Fixed
+          echo "### Fixed" >> /tmp/changelog_entry.md
+          git log $COMMIT_RANGE --pretty=format:"%s" | grep -E '^fix:' | sed 's/^fix: /- /' | sort -u >> /tmp/changelog_entry.md || echo "None" >> /tmp/changelog_entry.md
+          echo "" >> /tmp/changelog_entry.md
+          
+          # Security
+          echo "### Security" >> /tmp/changelog_entry.md
+          git log $COMMIT_RANGE --pretty=format:"%s" | grep -E '^fix(security):|^feat(security):|^security:' | sed 's/^[^:]*: /- /' | sort -u >> /tmp/changelog_entry.md || echo "None" >> /tmp/changelog_entry.md
+          echo "" >> /tmp/changelog_entry.md
+          
+          # Show generated entry
+          echo "=== Generated CHANGELOG Entry ==="
+          cat /tmp/changelog_entry.md
+
+      - name: Update CHANGELOG.md
+        run: |
+          # CHANGELOG.md가 없으면 생성
+          if [ ! -f "CHANGELOG.md" ]; then
+            cat > CHANGELOG.md << 'EOF'
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+EOF
+          fi
+          
+          # 새로운 엔트리를 맨 위에 추가
+          # 기존 헤더 다음에 추가
+          head -n 3 CHANGELOG.md > /tmp/changelog_header.md
+          tail -n +4 CHANGELOG.md > /tmp/changelog_old.md
+          
+          # 새로운 CHANGELOG 조합
+          cat /tmp/changelog_header.md > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          cat /tmp/changelog_entry.md >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          cat /tmp/changelog_old.md >> CHANGELOG.md
+          
+          # 변경사항 확인
+          echo "=== Updated CHANGELOG.md ==="
+          git diff CHANGELOG.md
+
+      - name: Commit CHANGELOG.md
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add CHANGELOG.md
+          git diff --staged --quiet || git commit -m "docs: update CHANGELOG.md for v${{ steps.get_version.outputs.version }}"
+          git push
+
+      - name: Summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version**: ${{ steps.get_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Date**: ${{ steps.get_version.outputs.date }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Changes" >> $GITHUB_STEP_SUMMARY
+          echo "See generated changelog above" >> $GITHUB_STEP_SUMMARY
