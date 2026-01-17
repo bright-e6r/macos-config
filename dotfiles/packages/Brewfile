@@ -59,4 +59,4 @@ cask "ghostty"
 cask "visual-studio-code"
 
 # Utilities
-brew "notion-calendar"
+cask "notion-calendar"
