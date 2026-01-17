@@ -33,12 +33,13 @@ jobs:
       - name: Verify required files exist
         run: |
           echo "Verifying file structure..."
-          
+
           required_files=(
             "install.sh"
             "setup-brewfile.sh"
             "setup-masfile.sh"
             "setup-ohmyzsh-powerlevel10k.sh"
+            "setup-tmux.sh"
             "setup-git-config.sh"
             "setup-alias.sh"
             "dotfiles/.zshrc"
@@ -46,6 +47,7 @@ jobs:
             "dotfiles/packages/Masfile"
             "dotfiles/alias/essentials.zsh"
             "dotfiles/alias/git.zsh"
+            "dotfiles/tmux/tmux.conf.local"
           )
           
           for file in "${required_files[@]}"; do
@@ -256,3 +258,18 @@ jobs:
             exit 1
           fi
           echo "✓ .zshrc template is valid"
+
+      - name: Test setup-tmux.sh structure
+        run: |
+          echo "Testing setup-tmux.sh structure..."
+
+          if [ -f "dotfiles/tmux/tmux.conf.local" ]; then
+            echo "  ✓ tmux.conf.local exists"
+          else
+            echo "  ✗ tmux.conf.local not found!"
+            exit 1
+          fi
+
+          shellcheck setup-tmux.sh
+          echo "  ✓ setup-tmux.sh syntax valid"
+          echo "✓ setup-tmux.sh structure is valid"
