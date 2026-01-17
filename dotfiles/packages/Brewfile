@@ -60,3 +60,6 @@ cask "visual-studio-code"
 
 # Utilities
 cask "notion-calendar"
+
+# Python
+brew "pyenv"

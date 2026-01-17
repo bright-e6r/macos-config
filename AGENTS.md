@@ -10,6 +10,7 @@ This repository contains scripts, dotfiles, and configuration for setting up and
 - Initial macOS setup automation (hostname, shell configuration)
 - Package management via Homebrew (CLI tools, GUI apps)
 - Mac App Store apps via Mas
+- Python version management via Pyenv
 - Git configuration with XDG Base Directory compliance
 - Shell configuration (zsh, tmux)
 

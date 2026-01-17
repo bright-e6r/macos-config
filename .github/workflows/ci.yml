@@ -40,6 +40,7 @@ jobs:
             "setup-masfile.sh"
             "setup-ohmyzsh-powerlevel10k.sh"
             "setup-tmux.sh"
+            "setup-pyenv.sh"
             "setup-git-config.sh"
             "setup-alias.sh"
             "dotfiles/.zshrc"
@@ -257,7 +258,7 @@ jobs:
             echo "  ✗ .zshrc not found!"
             exit 1
           fi
-          echo "✓ .zshrc template is valid"
+           echo "✓ .zshrc template is valid"
 
       - name: Test setup-tmux.sh structure
         run: |
@@ -273,3 +274,18 @@ jobs:
           shellcheck setup-tmux.sh
           echo "  ✓ setup-tmux.sh syntax valid"
           echo "✓ setup-tmux.sh structure is valid"
+
+      - name: Test setup-pyenv.sh structure
+        run: |
+          echo "Testing setup-pyenv.sh structure..."
+
+          if [ -f "setup-pyenv.sh" ]; then
+            echo "  ✓ setup-pyenv.sh exists"
+          else
+            echo "  ✗ setup-pyenv.sh not found!"
+            exit 1
+          fi
+
+          shellcheck setup-pyenv.sh
+          echo "  ✓ setup-pyenv.sh syntax valid"
+          echo "✓ setup-pyenv.sh structure is valid"

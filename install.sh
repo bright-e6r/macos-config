@@ -74,6 +74,15 @@ fi
 
 echo ""
 
+if [ -f "$SCRIPT_DIR/setup-pyenv.sh" ]; then
+    echo "Running Pyenv setup..."
+    "$SCRIPT_DIR/setup-pyenv.sh"
+else
+    echo "setup-pyenv.sh not found"
+fi
+
+echo ""
+
 if [ -f "$SCRIPT_DIR/setup-git-config.sh" ]; then
     echo "Running git config setup..."
     export XDG_CONFIG_HOME="$HOME/.config"
@@ -92,6 +101,10 @@ echo "  p10k configure"
 echo ""
 echo "Oh My Tmux는 이미 설정되었습니다. tmux를 실행하면 됩니다:"
 echo "  tmux"
+echo ""
+echo "Pyenv가 설정되었습니다. Python 버전을 설치하려면:"
+echo "  pyenv install 3.12.1"
+echo "  pyenv global 3.12.1"
 echo ""
 echo "설정을 마친 후에는 터미널을 다시 시작하세요."
 echo ""

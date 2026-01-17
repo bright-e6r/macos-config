@@ -51,6 +51,7 @@ Each `setup-*.sh` script handles a specific configuration area:
 - **setup-masfile.sh** - Installs Mac App Store applications
 - **setup-ohmyzsh-powerlevel10k.sh** - Sets up Oh My Zsh, PowerLevel10k theme, and zsh plugins
 - **setup-tmux.sh** - Sets up Oh My Tmux with XDG configuration
+- **setup-pyenv.sh** - Sets up Pyenv for Python version management
 - **setup-git-config.sh** - Configures git with XDG compliance
 - **setup-alias.sh** - Sets up shell aliases
 
@@ -84,9 +85,15 @@ After completing a setup script:
    tmux
    ```
 
-3. Restart your terminal to apply all changes
+3. Install Python with Pyenv:
+   ```bash
+   pyenv install 3.12.1
+   pyenv global 3.12.1
+   ```
 
-4. Run `alias` to view available shell aliases
+4. Restart your terminal to apply all changes
+
+5. Run `alias` to view available shell aliases
 
 ## Maintenance
 
