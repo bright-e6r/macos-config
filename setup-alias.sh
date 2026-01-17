@@ -10,6 +10,7 @@ cp -r "$(dirname "$0")/dotfiles/alias/"* "$ALIAS_DIR/"
 
 echo "Aliases copied to $ALIAS_DIR"
 
+# shellcheck disable=SC2016
 ALIAS_LOAD_CODE='
 # Load aliases from alias directory
 for file in "$XDG_CONFIG_HOME/alias/"*.zsh; do

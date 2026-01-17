@@ -8,7 +8,7 @@ echo ""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "Setting hostname..."
-read -p "Enter hostname: " HOSTNAME
+read -r -p "Enter hostname: " HOSTNAME
 
 if [ -n "$HOSTNAME" ]; then
     sudo scutil --set HostName "$HOSTNAME"
@@ -23,9 +23,7 @@ echo ""
 
 if ! command -v brew &> /dev/null; then
     echo "Homebrew not found. Installing..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-    if [ $? -eq 0 ]; then
+    if /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
         echo "Homebrew installed successfully"
         if [[ "$(/bin/uname -m)" == "arm64" ]]; then
             eval "$(/opt/homebrew/bin/brew shellenv)"

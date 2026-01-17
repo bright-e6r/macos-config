@@ -5,8 +5,6 @@ set -e
 echo "=== Brewfile Setup Script ==="
 echo ""
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 if [ ! -f "$(dirname "$0")/dotfiles/packages/Brewfile" ]; then
     echo "Brewfile not found"
     exit 1
