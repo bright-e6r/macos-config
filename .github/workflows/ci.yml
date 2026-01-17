@@ -20,7 +20,7 @@ jobs:
       - name: Run ShellCheck on all scripts
         run: |
           echo "Checking shell scripts..."
-          find . -name "*.sh" -type f -exec shellcheck -x {} +
+          find . -name "*.sh" -type f -exec shellcheck {} +
           echo "✓ All shell scripts passed validation"
 
   file-structure:
@@ -129,7 +129,7 @@ jobs:
             "gh"
             "tmux"
             "zsh"
-            "neovim"
+            "nvim"
             "bat"
             "lsd"
             "tree"
