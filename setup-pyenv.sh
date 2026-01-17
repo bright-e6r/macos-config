@@ -22,22 +22,34 @@ if ! grep -q "Pyenv: Python version management" "$ZSHRC"; then
     # pyenv 설정 추가 (XDG alias 로딩 이전에)
     # .zshrc의 XDG alias 로딩 라인 찾기
     if grep -q "Load aliases from alias directory" "$ZSHRC"; then
-        # XDG alias 로딩 라인 찾기
-        sed -i '' "/Load aliases from alias directory/i\\
-\\
-# Pyenv: Python version management\\
-export PYENV_ROOT=\"\\$HOME/.pyenv\"\\
-export PATH=\"\\$PYENV_ROOT/bin:\\$PATH\"\\
-eval \"\\$(pyenv init -)\"\\
-" "$ZSHRC"
+        # 간단한 방법: XDG alias 로딩 라인 뒤에 pyenv 설정 추가
+        LINE_NUM=$(grep -n "Load aliases from alias directory" "$ZSHRC" | cut -d: -f1)
+
+        if [ -n "$LINE_NUM" ]; then
+            # 해당 라인까지 자르기
+            head -n "$LINE_NUM" "$ZSHRC" > /tmp/zshrc_new.tmp
+
+            # pyenv 설정 추가
+            {
+                echo ""
+                echo "# Pyenv: Python version management"
+                echo "export PYENV_ROOT=\"\$HOME/.pyenv\""
+                echo "export PATH=\"\$PYENV_ROOT/bin:\$PATH\""
+                echo "eval \"\$(pyenv init -)\""
+            } >> /tmp/zshrc_new.tmp
+
+            # 나머지 내용 추가
+            tail -n +$((LINE_NUM + 1)) "$ZSHRC" >> /tmp/zshrc_new.tmp
+
+            # 원본 파일 교체
+            mv /tmp/zshrc_new.tmp "$ZSHRC"
+        fi
     else
         # XDG alias 로딩이 없으면 맨 아래 추가
-        {
-            echo "# Pyenv: Python version management"
-            echo "export PYENV_ROOT=\"\$HOME/.pyenv\""
-            echo "export PATH=\"\$PYENV_ROOT/bin:\$PATH\""
-            echo "eval \"\$(pyenv init -)\""
-        } >> "$ZSHRC"
+        echo "# Pyenv: Python version management" >> "$ZSHRC"
+        echo "export PYENV_ROOT=\"$HOME/.pyenv\"" >> "$ZSHRC"
+        echo "export PATH=\"$PYENV_ROOT/bin:$PATH\"" >> "$ZSHRC"
+        echo "eval \"\$(pyenv init -)\"" >> "$ZSHRC"
     fi
 
     echo "  ✓ Pyenv configuration added to .zshrc"
