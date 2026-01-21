@@ -83,6 +83,15 @@ fi
 
 echo ""
 
+if [ -f "$SCRIPT_DIR/setup-nodenv.sh" ]; then
+    echo "Running Nodenv setup..."
+    "$SCRIPT_DIR/setup-nodenv.sh"
+else
+    echo "setup-nodenv.sh not found"
+fi
+
+echo ""
+
 if [ -f "$SCRIPT_DIR/setup-git-config.sh" ]; then
     echo "Running git config setup..."
     export XDG_CONFIG_HOME="$HOME/.config"
@@ -108,6 +117,16 @@ echo "  pyenv global 3.12.1"
 echo ""
 echo "설치 가능한 Python 버전 목록 보기:"
 echo "  pyenv install --list | grep -E '^\s*3\.(10|11|12)' | tail -10"
+echo ""
+echo "Nodenv가 설정되었습니다."
+echo "Node.js 최신 LTS 버전과 pnpm이 자동으로 설치되었습니다."
+echo ""
+echo "다른 Node.js 버전을 설치하려면:"
+echo "  nodenv install <version>"
+echo "  nodenv global <version>"
+echo ""
+echo "설치 가능한 Node.js 버전 목록:"
+echo "  nodenv install --list | grep -E '^(22\\.|20\\.|18\\.|25\\.)' | sort -V"
 echo ""
 echo "설정을 마친 후에는 터미널을 다시 시작하세요."
 echo ""

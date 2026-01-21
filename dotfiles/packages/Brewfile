@@ -43,6 +43,12 @@ brew "diff-so-fancy" # git diff 출력을 가독성 좋게 포매팅
 # Dev utils
 brew "opencode"
 cask "claude-code"
+cask "ghostty"
+cask "warp"
+cask "visual-studio-code"
+cask "claude"
+brew "pyenv"
+brew "nodenv"
 
 # Taps
 tap "anomalyco/tap"
@@ -55,11 +61,7 @@ cask "google-chrome"
 cask "notion"
 cask "slack"
 cask "appcleaner"
-cask "ghostty"
-cask "visual-studio-code"
 
 # Utilities
 cask "notion-calendar"
 
-# Python
-brew "pyenv"
