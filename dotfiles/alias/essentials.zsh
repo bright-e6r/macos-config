@@ -126,3 +126,4 @@ alias reload='exec $SHELL -l'
 alias zshrc="vim ~/.zshrc"
 alias vim="nvim"
 alias b="bat"
+alias cyclecount='system_profiler SPPowerDataType | awk "/Cycle Count/ {print \"Battery Cycle Count:\", \$NF}"'
