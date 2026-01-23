@@ -92,6 +92,15 @@ fi
 
 echo ""
 
+if [ -f "$SCRIPT_DIR/setup-claude-code.sh" ]; then
+    echo "Running Claude Code setup..."
+    "$SCRIPT_DIR/setup-claude-code.sh"
+else
+    echo "setup-claude-code.sh not found"
+fi
+
+echo ""
+
 if [ -f "$SCRIPT_DIR/setup-git-config.sh" ]; then
     echo "Running git config setup..."
     export XDG_CONFIG_HOME="$HOME/.config"
