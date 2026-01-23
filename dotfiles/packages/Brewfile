@@ -48,6 +48,10 @@ cask "visual-studio-code"
 cask "claude"
 brew "pyenv"
 brew "nodenv"
+brew "jq"  # JSON 처리
+brew "yq"  # jq의 YAML version
+brew "ripgrep"  # rg - grep보다 빠르고 강력
+
 
 # Taps
 tap "anomalyco/tap"
